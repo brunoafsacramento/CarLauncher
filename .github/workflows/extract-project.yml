@@ -1,0 +1,44 @@
+name: Extract CarLauncher ZIP
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract project files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/carlauncher
+          unzip -q CarLauncher.zip -d /tmp/carlauncher
+
+          source_dir="/tmp/carlauncher"
+          mapfile -t entries < <(find /tmp/carlauncher -mindepth 1 -maxdepth 1)
+          if [ "${#entries[@]}" -eq 1 ] && [ -d "${entries[0]}" ]; then
+            source_dir="${entries[0]}"
+          fi
+
+          rsync -a --exclude='.github' --exclude='CarLauncher.zip' "${source_dir}/" ./
+
+      - name: Commit extracted files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git reset -- CarLauncher.zip || true
+          if git diff --cached --quiet; then
+            echo "No extracted file changes to commit."
+            exit 0
+          fi
+          git commit -m "Extract CarLauncher project source"
+          git push
