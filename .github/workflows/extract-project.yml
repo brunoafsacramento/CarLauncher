@@ -1,4 +1,4 @@
-name: Extract CarLauncher ZIP
+name: Extrair código-fonte
 
 on:
   workflow_dispatch:
@@ -10,35 +10,24 @@ jobs:
   extract:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Extract project files
-        shell: bash
+      - name: Extrair ZIP
         run: |
           set -euo pipefail
-          mkdir -p /tmp/carlauncher
-          unzip -q CarLauncher.zip -d /tmp/carlauncher
+          unzip -q -o CarLauncher.zip -d .
+          test -d CarLauncher
+          find CarLauncher -maxdepth 2 -type f | head -50
 
-          source_dir="/tmp/carlauncher"
-          mapfile -t entries < <(find /tmp/carlauncher -mindepth 1 -maxdepth 1)
-          if [ "${#entries[@]}" -eq 1 ] && [ -d "${entries[0]}" ]; then
-            source_dir="${entries[0]}"
-          fi
-
-          rsync -a --exclude='.github' --exclude='CarLauncher.zip' "${source_dir}/" ./
-
-      - name: Commit extracted files
-        shell: bash
+      - name: Salvar arquivos no GitHub
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git reset -- CarLauncher.zip || true
+          git add -A -- CarLauncher
           if git diff --cached --quiet; then
-            echo "No extracted file changes to commit."
+            echo "Nenhuma alteração encontrada."
             exit 0
           fi
-          git commit -m "Extract CarLauncher project source"
+          git commit -m "Extract CarLauncher source code"
           git push
